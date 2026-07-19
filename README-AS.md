@@ -1,4 +1,4 @@
-Hi whoever is reading this. This is a atom simulator which can simulate atoms. The rough structure of my code is mentioned below:
+Hi whoever is reading this. This is an atom simulator which can simulate atoms. The rough structure of my code is mentioned below:
 1) The user enters the atomic number (1-30) which is then used to find the electronic configuration in the form of numbers.
 2) Each orbital is assigned a numerical value (s -> 1, p -> 2, d -> 3)
 3) Until pointcnt number of electron superpositions are received, the loop is not ended.
