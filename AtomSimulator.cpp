@@ -1,11 +1,12 @@
 #include "raylib.h"
 #include "rlgl.h"
+#include <unordered_set>
 #include <cmath>
 #include <vector>
 #include <random>
 #include <iostream>
 
-float render = 600.f, R = 500.f, sensitivity = 0.1f, speed = 15.f, scale = 270.f;
+const float render = 600.f, R = 500.f, sensitivity = 0.1f, scale = 270.f, r = 6.6f, r_ = 7.2f, A = 10.f;
 static std::mt19937 gen(std::random_device{}());
 static std::uniform_int_distribution<> dist(-R, R);
 static std::uniform_real_distribution<float> distr(0.0f, 1.0f);
@@ -43,6 +44,7 @@ std::vector<int> Electronic_Configurator(int z) {
     } return econfig;
 }
 
+// These hardcoded values are evaluated by ChatGPT by conducting a numerical search on the formulas
 static const std::vector<float> maxProbs = {
     0.781212f,    // 1s
     3.112452f,    // 2s
@@ -102,13 +104,67 @@ const std::vector<Color> colours = {WHITE, (Color){255, 255, 120, 255}, GREEN, O
 const std::vector<int> neutrons = {0, 2, 4, 5, 6, 6, 7, 8, 10, 10, 12, 12, 14, 14, 16, 16, 18, 22, 20, 20, 24, 26, 28, 28, 30, 30,
                                    32, 30, 34, 34};
 
+int getuniqueid(Vector3 a) {
+    return (int)(a.x * 1e9) + (int)(a.y * 1e6) + (int)(a.z * 1e3);
+}
+
+const std::vector<float> angles = {90.0f, 45.0f, 135.0f, 180.0f, 22.5f, 112.5f, 67.5f, 157.5f, 33.75f, 123.75f, 56.25f, 146.25f, 11.25f,
+    101.25f, 78.75f, 168.75f, 39.375f, 129.375f, 50.625f, 140.625f, 16.875f, 106.875f, 73.125f, 163.125f, 5.625f, 95.625f, 84.375f, 174.375f};
+
+struct nucleon {
+    Color color;
+    Vector3 position;
+    nucleon(Color colour, Vector3 pos) {
+        color = colour;
+        position = pos;
+    }
+};
+
 int main() {
-    int k = 1;
+    int k = 1; float R_ = 0.f;
     std::cout << "Note: This program works flawlessly only for the first 30 elements";
-    std::cout << "\nEnter the atomic number Z: "; std::cin >> k; int n = neutrons[k - 1] + k;
+    std::cout << "\nEnter the atomic number Z: "; std::cin >> k; int M = neutrons[k - 1], n = M + k;
     std::vector<int> econfig = Electronic_Configurator(k), Ints(k);
     std::cout << "\nThe electronic configuration of this element is: \n";
     
+    // My own nucleus shape generation algorithm
+    std::unordered_set<int> cabinet;
+    std::vector<Vector3> directions;
+    float y = (n % 2 == 0) ? 0.f : r; R_ = r * std::cbrt((float)n);
+    int x = std::ceil((R_ - y) / (2.f * r)), cnt0 = 0, cnt1 = 0, cnt2 = 0, numbr = (int)(y/r);
+    float angle1 = 0.f, angle2 = 0.f;
+    Vector3 dir;
+    while (directions.size() * x + numbr < n) {
+        if (cnt0 == 0) {
+            float angle1R = angle1 * DEG2RAD, angle2R = angle2 * DEG2RAD, sinr = std::sin(angle1R);
+            dir = {sinr*std::cos(angle2R), std::cos(angle1R), -sinr*std::sin(angle2R)};
+        } else {
+            dir = multiplyVS(dir, -1.f);
+            cnt1++; if (cnt1 > 27) {cnt1 = 0;}
+            cnt2 += (cnt1 % 2 == 1) ? 1 : 0; if (cnt2 > 27) {cnt2 = 0;}
+            angle1 = angles[cnt1]; angle2 = angles[cnt2];
+        } cnt0 = 1 - cnt0;
+        int id = getuniqueid(dir);
+        if (cabinet.count(id) == 0) {
+            cabinet.insert(id);
+            directions.push_back(dir);
+        }
+    } std::vector<nucleon> nucleons;
+    if (numbr != 0) {nucleon Nucleon(BLUE, {0.f, 0.f, 0.f}); nucleons.push_back(Nucleon);}
+    bool breaks = false;
+    for (auto const& Dir : directions) {
+        for (int m = 1; m <= x; m++) {
+            Color COLOR = BLUE; if (numbr % 2 == 1 && M != 0) {COLOR = RED; M--;}
+            nucleon Nucleon(COLOR, multiplyVS(Dir, r*(2.f*m - 1.f) + y));
+            nucleons.push_back(Nucleon);
+            numbr++;
+            if (numbr == n) {breaks = true; break;}
+        } if (breaks) {
+            breaks = false;
+            break;
+        }
+    }
+
     const int pointcnt = 170000;
     std::vector<Vector3> positions; std::vector<Color> colors;
     bool flag = false; int cnt = 0;
@@ -125,7 +181,7 @@ int main() {
             while (positions.size() < cnt) {
                 float x = (float)(dist(gen)), y = (float)(dist(gen)), z = (float)(dist(gen)); Vector3 vec = {x, y, z};
                 float r = pythagore(vec);
-                if (r > R || r < 33.33f) {continue;}
+                if (r > R || r < R_) {continue;}
                 float chance = normalizedchance(r, z, y, x, r/scale, NUM / 10);
                 if (distr(gen) > chance) {continue;}
                 positions.push_back(vec);
@@ -166,7 +222,7 @@ int main() {
     camera.fovy = 90.f;
     camera.projection = CAMERA_PERSPECTIVE;
 
-    float theta = 90.f, phi = 90.f;
+    float theta = 90.f, phi = 90.f, speed = 0.f;
     while (!WindowShouldClose()) {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
             Vector2 mousedel = GetMouseDelta();
@@ -177,21 +233,23 @@ int main() {
             float thetaR = theta * DEG2RAD, phiR = phi * DEG2RAD, sinr = std::sin(thetaR);
             camera.target = addVV(camera.position, multiplyVS({sinr*std::cos(phiR), std::cos(thetaR), -sinr*std::sin(phiR)}, render));
         } if (IsKeyDown(KEY_W) || IsKeyDown(KEY_S)) {
-            float sign = (IsKeyDown(KEY_W)) ? 1.f : -1.f;
+            float sign = (IsKeyDown(KEY_W)) ? 1.f : -1.f; speed += GetFrameTime() * A;
             Vector3 vec = multiplyVS(addVV(camera.target, multiplyVS(camera.position, -1.f)), sign * speed / render);
             camera.position = addVV(camera.position, vec);
             camera.target = addVV(camera.target, vec);
         } else if (IsKeyDown(KEY_A) || IsKeyDown(KEY_D)) {
-            float sign = (IsKeyDown(KEY_D)) ? -1.f : 1.f;
+            float sign = (IsKeyDown(KEY_D)) ? -1.f : 1.f; speed += GetFrameTime() * A;
             Vector3 vec = multiplyVS(cross({0.f, 1.f, 0.f}, addVV(camera.target, multiplyVS(camera.position, -1.f))), sign * speed / render);
             camera.position = addVV(camera.position, vec);
             camera.target = addVV(camera.target, vec);
-        } BeginDrawing();
+        } else {speed = 0.f;}
+        BeginDrawing();
             ClearBackground(BLACK);
             BeginMode3D(camera);
-                DrawSphere({0.f, 0.f, 0.f}, 33.33f, BLUE); // Nucleus
-                rlEnablePointMode();
-                rlSetPointSize(2.f);
+                for (auto const& Nucleon : nucleons) {
+                    DrawSphere(Nucleon.position, r_, Nucleon.color);  // Nucleons
+                } rlEnablePointMode();
+                rlSetPointSize(1.1f);
                 rlDisableBackfaceCulling();
                 DrawModel(model, {0.f, 0.f, 0.f}, 1.f, WHITE); // Electrons' superposition
                 rlEnableBackfaceCulling();
@@ -199,6 +257,7 @@ int main() {
             EndMode3D();
             DrawText(TextFormat("FPS: %i", GetFPS()), 2, 2, 20, WHITE); // FPS
             DrawText("+", 385, 210, 30, WHITE); // Crosshair
+            DrawText(TextFormat("Speed: %.0f px/s", speed), 2, 428, 20, WHITE); // Speed
         EndDrawing();
     }
 
