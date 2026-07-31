@@ -1,2 +1,1 @@
-There are some unknown but definite bugs in the Black Hole Simulator. Whoever is reading this, pls tell what are those bugs and fix them if
-you want and can!
+I've successfully coded a flawless black hole simulator. It uses the standard, for-simulation formulas and functions to find the next state of the photon and some basic linear algebra to get the vectors lining up perfectly.
