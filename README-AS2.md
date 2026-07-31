@@ -8,8 +8,7 @@ we can set the following approximate equation: n * 4/3 * pi * r^3 = 4/3 * pi * R
 nucleons and R is the radius of the larger sphere. Simplifying the equation, we have: R^3 = n * r^3. Taking cube roots of both sides, we
 have: R = r * n^{1/3}. Now, let us postulate that if n is odd, the centre will be occupied by a nucleon and if not, it will not be occupied.
 So, R = 2xr + y where y = r if n is odd and y = 0 if n is even and x is the number of nucleons in a single line or axis. Solving for x gives
-: x = (R - y) / 2r. Now, we just have to loop over the factor angles of 90 degree on the polar and azimuthal angles and use the spherical-to
--cartesian coordinate conversion formulas, we will have the unit-vector of the line on which x number of nucleons are present. To find the
+: x = (R - y) / 2r. Now, looping over the factor angles of 90 degree on the polar and azimuthal angles and using the spherical-to-cartesian coordinate conversion formulas, we will have the unit-vector of the line on which x number of nucleons are present. To find the
 coordinates of the nucleons, we just have to loop over j and evaluate 2jr + y - r = r(2j- 1) + y and multiply this by the unit vector until
 we get n valid positions. Valid in the previous sentence means that none of the nucleons overlap due to similar or too close coordinates. You
 might be wondering that the radius of the nucleons I draw is greater than r and so I intentionally make them overlap. This is to show respect
